@@ -136,10 +136,34 @@ th {
   background: #f8fafc;
   position: sticky;
   top: 0;
+  white-space: nowrap;
 }
 
 td a {
   color: var(--accent);
+}
+
+.numeric {
+  text-align: right;
+}
+
+.note-cell {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.note-cell input {
+  flex: 1;
+  min-width: 120px;
+  padding: 6px 8px;
+  border: 1px solid #cbd5f5;
+  border-radius: 6px;
+}
+
+.note-cell button {
+  padding: 6px 12px;
+  font-size: 14px;
 }
 
 .empty {

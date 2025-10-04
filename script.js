@@ -18,29 +18,110 @@ function renderResults(items) {
   resultsBody.innerHTML = '';
   if (!items.length) {
     const row = document.createElement('tr');
-    row.innerHTML = '<td colspan="12" class="empty">暂无数据</td>';
+    row.innerHTML = '<td colspan="10" class="empty">暂无数据</td>';
     resultsBody.appendChild(row);
     return;
   }
 
   for (const item of items) {
     const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${item.id ?? ''}</td>
-      <td>${item.platform ?? ''}</td>
-      <td><a href="${item.url}" target="_blank" rel="noopener">链接</a></td>
-      <td>${item.creator ?? ''}</td>
-      <td>${item.campaign_id ?? ''}</td>
-      <td>${item.posted_at ? formatDate(item.posted_at) : ''}</td>
-      <td>${item.views ?? 0}</td>
-      <td>${item.likes ?? 0}</td>
-      <td>${item.comments ?? 0}</td>
-      <td>${item.engagement_rate ?? 0}</td>
-      <td>${item.notes ?? ''}</td>
-      <td>${item.fetched_at ? formatDate(item.fetched_at) : ''}</td>
-    `;
+    row.dataset.id = item.id;
+
+    row.appendChild(createTextCell(item.platform ?? ''));
+    row.appendChild(createLinkCell(item.url));
+    row.appendChild(createTextCell(item.creator ?? ''));
+    row.appendChild(createTextCell(item.posted_at ? formatDate(item.posted_at) : ''));
+    row.appendChild(createNumericCell(item.views));
+    row.appendChild(createNumericCell(item.likes));
+    row.appendChild(createNumericCell(item.comments));
+    row.appendChild(createNumericCell(item.engagement_rate));
+    row.appendChild(createNoteCell(item));
+    row.appendChild(createTextCell(item.fetched_at ? formatDate(item.fetched_at) : ''));
+
     resultsBody.appendChild(row);
   }
+}
+
+function createTextCell(value) {
+  const td = document.createElement('td');
+  td.textContent = value ?? '';
+  return td;
+}
+
+function createNumericCell(value) {
+  const td = document.createElement('td');
+  td.classList.add('numeric');
+  td.textContent = value != null ? value : '';
+  return td;
+}
+
+function createLinkCell(url) {
+  const td = document.createElement('td');
+  if (!url) {
+    td.textContent = '';
+    return td;
+  }
+  const link = document.createElement('a');
+  link.href = url;
+  link.target = '_blank';
+  link.rel = 'noopener';
+  link.ariaLabel = '打开链接';
+  link.textContent = '🔗';
+  td.appendChild(link);
+  return td;
+}
+
+function createNoteCell(item) {
+  const td = document.createElement('td');
+  const wrapper = document.createElement('div');
+  wrapper.classList.add('note-cell');
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = item.notes ?? '';
+  input.placeholder = '添加备注';
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.textContent = '保存';
+
+  const saveNote = async () => {
+    const note = input.value;
+    button.disabled = true;
+    button.textContent = '保存中';
+    try {
+      const formData = new FormData();
+      formData.append('note', note);
+      const res = await fetch(`/api/results/${item.id}/note`, {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.detail || '保存失败');
+      }
+      button.textContent = '已保存';
+      setTimeout(() => (button.textContent = '保存'), 1500);
+    } catch (err) {
+      button.textContent = '重试';
+      renderStatus(String(err.message || err), 'error');
+    } finally {
+      button.disabled = false;
+    }
+  };
+
+  button.addEventListener('click', saveNote);
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      saveNote();
+    }
+  });
+
+  wrapper.appendChild(input);
+  wrapper.appendChild(button);
+  td.appendChild(wrapper);
+  return td;
 }
 
 function formatDate(value) {

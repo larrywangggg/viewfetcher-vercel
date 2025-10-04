@@ -15,7 +15,12 @@
 python3.11 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn api.index:app --reload --port 8000
+
+# 快速启动（自动打开浏览器）
+./dev.sh
+
+# 或手动运行服务
+# uvicorn api.index:app --reload --port 8000
 ```
 打开浏览器访问 `http://localhost:8000` 即可看到中文界面（静态文件）。
 

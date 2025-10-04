@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import io
 import csv
+from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from sqlalchemy import select
 
 from viewfetcher.db import Result, get_session, init_db, upsert_result
@@ -21,6 +22,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+api_router = APIRouter()
 
 
 def _serialize(result: Result) -> dict:
@@ -37,15 +43,30 @@ def _serialize(result: Result) -> dict:
         "engagement_rate": round(result.engagement_rate or 0.0, 2),
         "notes": result.notes,
         "fetched_at": result.fetched_at.isoformat() if result.fetched_at else None,
-    }
+}
 
 
-@app.get("/health")
+@app.get("/", include_in_schema=False)
+async def serve_index() -> FileResponse:
+    return FileResponse(BASE_DIR / "index.html")
+
+
+@app.get("/script.js", include_in_schema=False)
+async def serve_script() -> FileResponse:
+    return FileResponse(BASE_DIR / "script.js")
+
+
+@app.get("/styles.css", include_in_schema=False)
+async def serve_styles() -> FileResponse:
+    return FileResponse(BASE_DIR / "styles.css")
+
+
+@api_router.get("/health")
 async def health() -> dict:
     return {"status": "ok"}
 
 
-@app.post("/fetch")
+@api_router.post("/fetch")
 async def fetch_data(
     file: UploadFile = File(..., description="上传 CSV 或 XLSX 文件"),
     youtube_api_key: Optional[str] = Form(default=None, description="YouTube API Key，可选"),
@@ -75,9 +96,9 @@ async def fetch_data(
     )
 
 
-@app.get("/results")
+@api_router.get("/results")
 async def list_results(limit: int = 200, platform: Optional[str] = None) -> dict:
-    query = select(Result).order_by(Result.fetched_at.desc()).limit(limit)
+    query = select(Result).order_by(Result.fetched_at.asc()).limit(limit)
     if platform:
         query = query.where(Result.platform == platform.lower())
 
@@ -87,7 +108,23 @@ async def list_results(limit: int = 200, platform: Optional[str] = None) -> dict
     return {"items": [_serialize(r) for r in rows]}
 
 
-@app.get("/export")
+@api_router.post("/results/{result_id}/note")
+async def update_note(result_id: int, note: str = Form(..., description="备注")) -> JSONResponse:
+    with get_session() as session:
+        stmt = select(Result).where(Result.id == result_id)
+        record = session.execute(stmt).scalar_one_or_none()
+        if record is None:
+            raise HTTPException(status_code=404, detail="记录不存在")
+
+        record.notes = note
+        session.add(record)
+        session.flush()
+        payload = _serialize(record)
+
+    return JSONResponse({"status": "success", "item": payload})
+
+
+@api_router.get("/export")
 async def export_results() -> StreamingResponse:
     with get_session() as session:
         rows = session.execute(select(Result).order_by(Result.id.asc())).scalars().all()
@@ -132,3 +169,7 @@ async def export_results() -> StreamingResponse:
         "Content-Disposition": "attachment; filename=kol_results.csv"
     }
     return StreamingResponse(buffer, media_type="text/csv", headers=headers)
+
+
+app.include_router(api_router)
+app.include_router(api_router, prefix="/api")
