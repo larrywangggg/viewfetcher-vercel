@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ViewFetcher 看板</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header>
+    <h1>ViewFetcher（Vercel 版）</h1>
+    <p>上传 KOL 链接表，批量抓取 YouTube / Instagram / TikTok 数据并存入数据库。</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>步骤一：上传数据</h2>
+      <form id="upload-form">
+        <label for="file">选择文件（CSV / XLSX）</label>
+        <input type="file" id="file" name="file" accept=".csv,.xlsx" required />
+
+        <label for="apiKey">YouTube API Key（可选）</label>
+        <input type="password" id="apiKey" name="youtube_api_key" placeholder="输入后可稳定抓取 YouTube" />
+
+        <button type="submit" id="submit-btn">开始抓取</button>
+      </form>
+      <div id="status" class="status"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <h2>步骤二：历史结果</h2>
+        <div class="actions">
+          <button id="refresh-btn">刷新列表</button>
+          <a id="export-link" href="/api/export" target="_blank" rel="noopener">导出 CSV</a>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>平台</th>
+            <th>链接</th>
+            <th>KOL</th>
+            <th>活动ID</th>
+            <th>发布日期</th>
+            <th>观看</th>
+            <th>点赞</th>
+            <th>评论</th>
+            <th>互动率%</th>
+            <th>备注</th>
+            <th>抓取时间</th>
+          </tr>
+        </thead>
+        <tbody id="results-body">
+          <tr><td colspan="12" class="empty">暂无数据</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <footer>
+    <small>提示：在 Vercel 部署时请提供 DATABASE_URL 指向外部数据库。</small>
+  </footer>
+
+  <script src="/script.js"></script>
+</body>
+</html>
