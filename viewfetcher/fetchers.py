@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 # fetchers.py
+import os
 import re
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
+
 import requests
-from typing import Optional, Dict, List, Any
 
 try:  # pragma: no cover - import guard for deployment environments
     from yt_dlp import YoutubeDL  # type: ignore
@@ -32,7 +35,9 @@ def extract_youtube_id(url: str) -> Optional[str]:
     return m.group(1) if m else None
 
 # ---------- IG/TikTok: 仍使用 yt-dlp ----------
-YDL_OPTS = {
+INSTAGRAM_SESSIONID = os.getenv("INSTAGRAM_SESSIONID")
+
+YDL_OPTS: Dict[str, Any] = {
     "quiet": True,
     "nocheckcertificate": True,
     "skip_download": True,
@@ -42,16 +47,54 @@ YDL_OPTS = {
     "extract_flat": False,
     "socket_timeout": 10,
     "retries": 2,
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
 }
 
-def fetch_by_ytdlp(url: str) -> Dict[str, int]:
+if INSTAGRAM_SESSIONID:
+    YDL_OPTS.setdefault("http_headers", {})["Cookie"] = f"sessionid={INSTAGRAM_SESSIONID};"
+
+def _iso_from_upload_date(upload_date: Optional[str]) -> Optional[str]:
+    if not upload_date:
+        return None
+    try:
+        if isinstance(upload_date, int):
+            upload_date = str(upload_date)
+        if len(upload_date) == 8 and upload_date.isdigit():
+            dt = datetime.strptime(upload_date, "%Y%m%d")
+            return dt.replace(tzinfo=timezone.utc).isoformat()
+    except Exception:
+        return None
+    return None
+
+
+def fetch_by_ytdlp(url: str) -> Dict[str, Any]:
     ydl_cls = _get_ytdlp()
-    with ydl_cls(YDL_OPTS) as ydl:
+    opts = dict(YDL_OPTS)
+    if INSTAGRAM_SESSIONID:
+        headers = dict(opts.get("http_headers", {}))
+        headers["Cookie"] = f"sessionid={INSTAGRAM_SESSIONID};"
+        opts["http_headers"] = headers
+    with ydl_cls(opts) as ydl:
         info = ydl.extract_info(url, download=False)
         views = int(info.get("view_count") or info.get("views") or 0)
         likes = int(info.get("like_count") or info.get("likes") or 0)
         comments = int(info.get("comment_count") or info.get("comments") or 0)
-        return {"views": views, "likes": likes, "comments": comments}
+        creator = info.get("uploader") or info.get("channel")
+        posted_at = None
+        if info.get("timestamp"):
+            try:
+                posted_at = datetime.fromtimestamp(int(info["timestamp"]), tz=timezone.utc).isoformat()
+            except Exception:
+                posted_at = None
+        if not posted_at:
+            posted_at = _iso_from_upload_date(info.get("upload_date"))
+        return {
+            "views": views,
+            "likes": likes,
+            "comments": comments,
+            "creator": creator,
+            "posted_at": posted_at,
+        }
 
 # ---------- YouTube: 批量 API ----------
 def fetch_youtube_batch_stats(video_ids: List[str], api_key: str) -> Dict[str, Dict]:

@@ -147,6 +147,11 @@ td a {
   text-align: right;
 }
 
+.views-cell {
+  font-weight: 600;
+  color: #7f1d1d;
+}
+
 .note-cell {
   display: flex;
   gap: 8px;

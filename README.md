@@ -28,13 +28,36 @@ pip install -r requirements.txt
 1. 将仓库推送到 GitHub 并在 Vercel 创建项目。
 2. 在 Vercel 项目设置里新增以下环境变量：
    - `DATABASE_URL`：指向外部数据库（例如 Neon/Supabase Postgres）。
-   - 可选：`YOUTUBE_API_KEY` 如果希望默认提供。
+   - `YOUTUBE_API_KEY`：你的 YouTube API key（部署时可使用 Vercel Secret）。
+   - 可选 `INSTAGRAM_SESSIONID`：你的 Instagram `sessionid`（用于提升 Reels 抓取成功率）。
 3. Vercel 会自动识别：
    - 根目录下的 `index.html` / `script.js` / `styles.css` 作为静态前端。
    - `api/index.py` 作为 Python Serverless Function（已在 `vercel.json` 指定 runtime）。
 4. 部署完成后访问对应的域名即可使用。
 
 > 注意：Serverless 环境是无状态的，无法使用本地 SQLite 文件持久化数据。请务必配置 `DATABASE_URL` 指向托管数据库。
+
+### Vercel Secret 示例
+使用 Vercel CLI 可以将敏感值写入 Secret，然后映射到环境变量：
+
+```bash
+# 1. 登录 Vercel（如未登录）
+vercel login
+
+# 2. 添加 Secret（输入时粘贴你的 Key，例如 YOUTUBE_API_KEY 内部值）
+vercel secrets add viewfetcher-youtube-key
+
+# 3. 关联到环境变量（Production & Preview 环境）
+vercel env add YOUTUBE_API_KEY production @viewfetcher-youtube-key
+vercel env add YOUTUBE_API_KEY preview @viewfetcher-youtube-key
+
+# 若需 Instagram sessionid
+vercel secrets add viewfetcher-instagram-session
+vercel env add INSTAGRAM_SESSIONID production @viewfetcher-instagram-session
+vercel env add INSTAGRAM_SESSIONID preview @viewfetcher-instagram-session
+```
+
+也可以直接在 Vercel Dashboard → Settings → Environment Variables 中粘贴上述值。API Key 仅用于服务器端调用，不会暴露在前端。
 
 ## 常用 API
 - `POST /api/fetch`：上传文件并执行抓取。

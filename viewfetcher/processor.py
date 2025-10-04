@@ -135,9 +135,9 @@ def process_file(file_bytes: bytes, filename: str, youtube_api_key: Optional[str
             results.append({
                 "platform": platform,
                 "url": url,
-                "creator": row.get("creator"),
+                "creator": stats.get("creator") or row.get("creator"),
                 "campaign_id": row.get("campaign_id"),
-                "posted_at": _parse_datetime(row.get("posted_at")),
+                "posted_at": _parse_datetime(stats.get("posted_at") or row.get("posted_at")),
                 "views": views,
                 "likes": likes,
                 "comments": comments,

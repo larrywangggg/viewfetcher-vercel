@@ -3,6 +3,7 @@ const statusBox = document.getElementById('status');
 const submitBtn = document.getElementById('submit-btn');
 const refreshBtn = document.getElementById('refresh-btn');
 const resultsBody = document.getElementById('results-body');
+const numberFormatter = new Intl.NumberFormat('zh-CN');
 
 function renderStatus(message, type = 'info') {
   statusBox.textContent = message;
@@ -31,7 +32,7 @@ function renderResults(items) {
     row.appendChild(createLinkCell(item.url));
     row.appendChild(createTextCell(item.creator ?? ''));
     row.appendChild(createTextCell(item.posted_at ? formatDate(item.posted_at) : ''));
-    row.appendChild(createNumericCell(item.views));
+    row.appendChild(createNumericCell(item.views, 'views-cell'));
     row.appendChild(createNumericCell(item.likes));
     row.appendChild(createNumericCell(item.comments));
     row.appendChild(createNumericCell(item.engagement_rate));
@@ -48,10 +49,13 @@ function createTextCell(value) {
   return td;
 }
 
-function createNumericCell(value) {
+function createNumericCell(value, extraClass) {
   const td = document.createElement('td');
   td.classList.add('numeric');
-  td.textContent = value != null ? value : '';
+  if (extraClass) {
+    td.classList.add(extraClass);
+  }
+  td.textContent = value != null && value !== '' ? formatNumber(value) : '';
   return td;
 }
 
@@ -126,10 +130,21 @@ function createNoteCell(item) {
 
 function formatDate(value) {
   try {
-    return new Date(value).toLocaleString('zh-CN', { hour12: false });
+    return new Date(value).toLocaleString('zh-CN', {
+      hour12: false,
+      timeZone: 'Asia/Shanghai',
+    });
   } catch (_) {
     return value;
   }
+}
+
+function formatNumber(value) {
+  const num = Number(value);
+  if (Number.isNaN(num)) {
+    return value;
+  }
+  return numberFormatter.format(num);
 }
 
 async function fetchResults() {
