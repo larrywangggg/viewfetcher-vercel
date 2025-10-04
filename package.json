@@ -1,0 +1,7 @@
+{
+  "name": "viewfetcher-vercel",
+  "private": true,
+  "scripts": {
+    "vercel-build": "echo 'Skip Next.js build'"
+  }
+}
