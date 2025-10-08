@@ -13,7 +13,12 @@ from typing import Iterator, Optional
 from sqlalchemy import Column, DateTime, Float, Integer, String, UniqueConstraint, create_engine, select
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./kol_results.sqlite3")
+if os.getenv("VERCEL"):
+    _default_sqlite_url = "sqlite:////tmp/kol_results.sqlite3"
+else:
+    _default_sqlite_url = "sqlite:///./kol_results.sqlite3"
+
+DATABASE_URL = os.getenv("DATABASE_URL", _default_sqlite_url)
 
 # SQLite needs special arguments when used with SQLAlchemy in multithreaded envs.
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
